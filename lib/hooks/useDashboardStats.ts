@@ -15,6 +15,7 @@ export interface DashboardStats {
   conversionRate: number
   pendingConfirmation: number
   atRiskCount: number
+  cancellations: number
   loading: boolean
   isEmpty: boolean
 }
@@ -30,6 +31,7 @@ const EMPTY_STATS: DashboardStats = {
   conversionRate: 0,
   pendingConfirmation: 0,
   atRiskCount: 0,
+  cancellations: 0,
   loading: true,
   isEmpty: true,
 }
@@ -96,6 +98,15 @@ export function useDashboardStats(dateFrom: string, dateTo: string): DashboardSt
         .eq('org_uid', DEFAULT_ORG_UID)
         .eq('lifecycle_status', 'at_risk')
 
+      // 5. Cancellations in the date range
+      const { count: cancellations } = await supabase
+        .from('appointments')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_uid', DEFAULT_ORG_UID)
+        .in('status', ['cancelled', 'отменена'])
+        .gte('date', dateFrom)
+        .lte('date', dateTo)
+
       const isEmpty =
         revenue === 0 &&
         appointments === 0 &&
@@ -113,6 +124,7 @@ export function useDashboardStats(dateFrom: string, dateTo: string): DashboardSt
         conversionRate,
         pendingConfirmation: pendingConfirmation ?? 0,
         atRiskCount: atRiskCount ?? 0,
+        cancellations: cancellations ?? 0,
         loading: false,
         isEmpty,
       })
