@@ -146,10 +146,11 @@ export async function POST(request: NextRequest) {
     try {
       workflowId = await cloneAndActivateWorkflow(credentialId, botUsername)
     } catch (e) {
-      console.error('[telegram/connect] workflow clone:', e)
+      const detail = e instanceof Error ? e.message : String(e)
+      console.error('[telegram/connect] workflow clone:', detail)
       // Rollback credential
       await deleteN8nCredential(credentialId)
-      return NextResponse.json({ ok: false, error: 'Не удалось запустить агента' }, { status: 500 })
+      return NextResponse.json({ ok: false, error: `Не удалось запустить агента: ${detail}` }, { status: 500 })
     }
 
     // 6. Save everything to org_settings
