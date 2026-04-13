@@ -19,6 +19,9 @@ function ycHeaders() {
 interface YCClient {
   id: number
   name: string
+  surname?: string
+  patronymic?: string
+  display_name?: string
   phone: string
   email: string | null
   visits: number
@@ -29,27 +32,29 @@ interface YCClient {
   birth_date: string | null
   sex_id: number
   comment: string | null
-  avg_check: number
-  first_visit_date: string | null
-  last_visit_date: string | null
+  sms_check?: number
+  sms_bot?: number
+  sms_not?: number
+  importance_id?: number
+  importance?: string
+  last_change_date?: string
   categories: { id: number; title: string }[]
   custom_fields: Record<string, unknown>
 }
 
 interface YCRecord {
   id: number
+  staff_id: number
   date: string
   datetime: string
-  time: string
-  duration: number
+  seance_length: number
   client: { id: number; name: string; phone: string }
   services: { id: number; title: string; cost: number }[]
   staff: { id: number; name: string }
-  status: { id: number; title: string }
   attendance: number
+  confirmed: number
   paid_full: number
   comment: string | null
-  cost: number
 }
 
 async function fetchClients(salonId: string, page: number): Promise<YCClient[]> {
@@ -82,29 +87,39 @@ async function fetchRecords(salonId: string, page: number, startDate: string, en
 
 function clientToRow(c: YCClient, orgUid: string) {
   const sexMap: Record<number, string> = { 1: 'мужской', 2: 'женский' }
+  const visits = c.visits ?? 0
+  const spent = c.spent ?? 0
   return {
     org_uid: orgUid,
     yc_id: String(c.id),
     yclients_id: c.id,
     fullname: c.name || 'Без имени',
+    name: c.name || null,
+    surname: c.surname || null,
+    patronymic: c.patronymic || null,
+    display_name: c.display_name || null,
     phone: c.phone || null,
     email: c.email || null,
-    lifecycle_status: c.visits > 0 ? 'client' : 'lead',
+    lifecycle_status: visits > 0 ? 'client' : 'lead',
     source_channel: 'yclients',
     discount: c.discount ?? 0,
-    visits: c.visits ?? 0,
-    spent: c.spent ?? 0,
+    visits,
+    spent,
     paid: c.paid ?? 0,
     balance: c.balance ?? 0,
-    avg_check: c.avg_check ?? 0,
+    avg_check: visits > 0 ? Math.round(spent / visits) : 0,
     birth_date: c.birth_date || null,
     sex_id: c.sex_id ?? 0,
     sex: sexMap[c.sex_id] ?? null,
     comment: c.comment || null,
+    sms_check: c.sms_check ?? 0,
+    sms_bot: c.sms_bot ?? 0,
+    sms_not: c.sms_not ?? 0,
+    importance_id: c.importance_id ?? 0,
+    importance: c.importance || null,
     categories: c.categories ?? [],
     custom_fields: c.custom_fields ?? {},
-    first_visit: c.first_visit_date || null,
-    last_visit: c.last_visit_date || null,
+    last_change_date: c.last_change_date || null,
     raw_payload: c,
     updated_at: new Date().toISOString(),
   }
@@ -112,6 +127,14 @@ function clientToRow(c: YCClient, orgUid: string) {
 
 function recordToRow(r: YCRecord, orgUid: string) {
   const service = r.services?.[0]
+  const attendance = r.attendance ?? 0
+  const confirmed = r.confirmed ?? 0
+  let status: string
+  if (attendance === 1) status = 'Визит'
+  else if (attendance === -1) status = 'Неявка'
+  else if (confirmed === 1) status = 'Подтверждено'
+  else status = 'Ожидание'
+
   return {
     org_uid: orgUid,
     yc_id: String(r.id),
@@ -119,14 +142,14 @@ function recordToRow(r: YCRecord, orgUid: string) {
     record_hash: `${r.id}_${r.date}`,
     client_name: r.client?.name ?? null,
     phone: r.client?.phone ?? null,
-    status: r.status?.title ?? null,
+    status,
     service_name: service?.title ?? null,
     service_id: service ? String(service.id) : null,
-    master_id: r.staff?.id ? String(r.staff.id) : null,
+    master_id: r.staff_id ? String(r.staff_id) : null,
     master_name: r.staff?.name ?? null,
     date: r.datetime || r.date || null,
-    duration_min: r.duration ? Math.round(r.duration / 60) : null,
-    price: r.cost ?? null,
+    duration_min: r.seance_length ? Math.round(r.seance_length / 60) : null,
+    price: service?.cost ?? null,
     comment: r.comment ?? null,
   }
 }
