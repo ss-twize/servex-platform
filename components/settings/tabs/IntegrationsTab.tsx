@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useOrgSettings } from '@/lib/hooks/useOrgSettings'
 import { useYClientsIntegrations, YClientsIntegration } from '@/lib/hooks/useYClientsIntegrations'
-import { callWebhook } from '@/lib/webhooks'
 import { DEFAULT_ORG_UID } from '@/lib/constants'
 
 // ─── Status helpers ────────────────────────────────────────────────────────────
@@ -279,74 +278,85 @@ function TelegramCard({ connected, botName, botUsername, onConnect, onDisconnect
   )
 }
 
-// ─── Simple integration card (WhatsApp) ────────────────────────────────────────
 
-interface SimpleCardProps {
-  title: string
+// ─── WhatsApp card ─────────────────────────────────────────────────────────────
+
+interface WhatsAppCardProps {
   connected: boolean
-  hint: string
-  onAction: () => Promise<{ success: boolean; error?: string }>
-  actionLabel: string
+  pending: boolean
+  hasInstance: boolean
+  onRequest: () => Promise<{ ok: boolean; error?: string }>
 }
 
-function SimpleIntegrationCard({
-  title,
-  connected,
-  hint,
-  onAction,
-  actionLabel,
-}: SimpleCardProps) {
+function WhatsAppCard({ connected, pending, hasInstance, onRequest }: WhatsAppCardProps) {
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
 
-  async function handleClick() {
+  async function handleRequest() {
     setLoading(true)
-    setMessage(null)
+    setError(null)
     try {
-      const result = await onAction()
-      setMessage({ text: result.success ? 'Подключено' : 'Статус обновлён', ok: true })
-    } catch {
-      setMessage({ text: 'Ошибка при подключении', ok: false })
+      const result = await onRequest()
+      if (result.ok) {
+        setSent(true)
+      } else {
+        setError(result.error ?? 'Ошибка при отправке заявки')
+      }
     } finally {
       setLoading(false)
-      setTimeout(() => setMessage(null), 3000)
     }
   }
+
+  const isPending = pending || sent
+  const statusColor = connected ? '#00FF00' : isPending ? '#F5A623' : '#5E7488'
+  const statusLabel = connected ? 'Подключено' : isPending ? 'Заявка отправлена' : 'Не подключено'
 
   return (
     <div className="bg-[#0F1622] border border-[#223444] rounded-xl p-4 mb-3">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span
-              className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ backgroundColor: connected ? '#00FF00' : '#5E7488' }}
-            />
-            <span className="text-white font-medium">{title}</span>
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: statusColor }} />
+            <span className="text-white font-medium">WhatsApp</span>
             <span
               className="text-xs px-2 py-0.5 rounded-full"
               style={{
-                backgroundColor: connected ? 'rgba(0,255,0,0.1)' : 'rgba(94,116,136,0.15)',
-                color: connected ? '#00FF00' : '#5E7488',
+                backgroundColor: connected
+                  ? 'rgba(0,255,0,0.1)'
+                  : isPending
+                  ? 'rgba(245,166,35,0.1)'
+                  : 'rgba(94,116,136,0.15)',
+                color: statusColor,
               }}
             >
-              {connected ? 'Подключено' : 'Не подключено'}
+              {statusLabel}
             </span>
           </div>
-          <p className="text-sm text-[#5E7488] ml-4">{hint}</p>
+          <p className="text-sm text-[#5E7488] ml-4">
+            {connected
+              ? hasInstance
+                ? 'Интеграция через Green-API активна'
+                : 'Подключено, ожидается настройка инстанса'
+              : isPending
+              ? 'Поддержка получила заявку и свяжется с вами'
+              : 'Подключается через поддержку'}
+          </p>
+          {error && <p className="text-xs text-red-400 ml-4 mt-1">{error}</p>}
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <button
-            onClick={handleClick}
-            disabled={loading}
-            className="text-sm px-4 py-1.5 rounded-lg border border-[#223444] text-[#EDF2FA] hover:border-[#00FF00] hover:text-[#00FF00] disabled:opacity-50 transition-colors whitespace-nowrap"
-          >
-            {loading ? 'Загрузка...' : actionLabel}
-          </button>
-          {message && (
-            <span className={`text-xs ${message.ok ? 'text-[#00FF00]' : 'text-red-400'}`}>
-              {message.text}
-            </span>
+
+        <div className="flex-shrink-0">
+          {!connected && !isPending && (
+            <button
+              onClick={handleRequest}
+              disabled={loading}
+              className="text-sm px-4 py-1.5 rounded-lg border border-[#223444] text-[#EDF2FA] hover:border-[#00FF00] hover:text-[#00FF00] disabled:opacity-50 transition-colors whitespace-nowrap"
+            >
+              {loading ? 'Отправка...' : 'Подключить'}
+            </button>
+          )}
+          {isPending && !connected && (
+            <span className="text-xs text-[#F5A623]">Ожидайте ответа</span>
           )}
         </div>
       </div>
@@ -411,10 +421,17 @@ export function IntegrationsTab() {
     window.location.reload()
   }
 
-  async function connectWhatsApp() {
-    await callWebhook('connect_whatsapp', {})
-    await updateSettings({ whatsapp_connected: true })
-    return { success: true }
+  async function requestWhatsApp(): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const res = await fetch('/api/whatsapp/request', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) {
+        await updateSettings({ whatsapp_pending: true })
+      }
+      return data
+    } catch {
+      return { ok: false, error: 'Ошибка соединения' }
+    }
   }
 
   if (settingsLoading) {
@@ -518,12 +535,11 @@ export function IntegrationsTab() {
       />
 
       {/* ── WhatsApp ───────────────────────────────────────────────────────── */}
-      <SimpleIntegrationCard
-        title="WhatsApp"
+      <WhatsAppCard
         connected={settings.whatsapp_connected}
-        hint="Через GREEN-API"
-        onAction={connectWhatsApp}
-        actionLabel={settings.whatsapp_connected ? 'Переподключить' : 'Подключить'}
+        pending={settings.whatsapp_pending}
+        hasInstance={!!settings.whatsapp_id_instance}
+        onRequest={requestWhatsApp}
       />
     </div>
   )

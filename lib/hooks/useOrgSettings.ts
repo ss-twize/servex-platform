@@ -27,6 +27,9 @@ export interface OrgSettings {
   telegram_bot_name: string | null
   telegram_bot_username: string | null
   whatsapp_connected: boolean
+  whatsapp_pending: boolean
+  whatsapp_id_instance: string | null
+  whatsapp_api_token_instance: string | null
 }
 
 const DEFAULT_SETTINGS: OrgSettings = {
@@ -52,6 +55,9 @@ const DEFAULT_SETTINGS: OrgSettings = {
   telegram_bot_name: null,
   telegram_bot_username: null,
   whatsapp_connected: false,
+  whatsapp_pending: false,
+  whatsapp_id_instance: null,
+  whatsapp_api_token_instance: null,
 }
 
 export function useOrgSettings() {
