@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const botUsername = bot.username as string
 
     // Register webhook in n8n (one workflow handles all bots via token in query param)
-    const N8N_WEBHOOK = 'https://n8n.srv1090249.hstgr.cloud/webhook/tg-agent'
+    const N8N_WEBHOOK = 'https://n8n.srv1090249.hstgr.cloud/webhook/ai-telegram'
     const webhookUrl = `${N8N_WEBHOOK}?token=${encodeURIComponent(token)}&org=${encodeURIComponent(DEFAULT_ORG_UID)}`
 
     const webhookRes = await fetch(
