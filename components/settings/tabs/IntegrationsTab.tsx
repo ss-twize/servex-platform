@@ -121,13 +121,13 @@ function YClientsFilialCard({ integration, onSync, syncing }: YClientsFilialCard
 
         {/* Action buttons */}
         <div className="flex flex-col gap-2 items-end flex-shrink-0">
-          {integration.status === 'active' && (
+          {(integration.status === 'active' || integration.status === 'syncing' || integration.status === 'degraded') && (
             <button
               onClick={() => onSync(integration)}
               disabled={syncing}
               className="text-xs px-3 py-1 rounded-lg border border-[#223444] text-[#EDF2FA] hover:border-[#00FF00] hover:text-[#00FF00] disabled:opacity-50 transition-colors whitespace-nowrap"
             >
-              {syncing ? 'Синхронизация...' : 'Синхронизировать'}
+              {syncing ? 'Синхронизация...' : integration.status === 'syncing' ? 'Повторить' : 'Синхронизировать'}
             </button>
           )}
           {(integration.status === 'activation_failed' || integration.status === 'disconnected') && (

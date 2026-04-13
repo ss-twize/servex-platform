@@ -289,8 +289,8 @@ export async function POST(request: NextRequest) {
       .update({ status: 'syncing', updated_at: new Date().toISOString() })
       .eq('id', integration_id)
 
-    // Run sync (fire & forget — respond immediately, sync continues)
-    runSync(salon_id, integration_id, resolvedOrgUid, jobId).catch(() => {})
+    // Run sync synchronously — Vercel kills fire-and-forget after response
+    await runSync(salon_id, integration_id, resolvedOrgUid, jobId).catch(() => {})
 
     return NextResponse.json({ ok: true, job_id: jobId })
   } catch {

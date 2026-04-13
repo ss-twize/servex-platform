@@ -156,8 +156,13 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 8. Redirect based on outcome
+  // 8. Update org_settings if at least one salon connected
   if (successCount > 0) {
+    await admin
+      .from('org_settings')
+      .update({ yclients_connected: true, updated_at: new Date().toISOString() })
+      .eq('org_uid', orgUid)
+
     return NextResponse.redirect(
       new URL('/settings?tab=integrations&connected=true', request.url)
     )
