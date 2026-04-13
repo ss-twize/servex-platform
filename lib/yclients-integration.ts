@@ -1,0 +1,107 @@
+import { createAdminClient } from '@/lib/supabase/admin'
+
+const PARTNER_TOKEN = process.env.YCLIENTS_PARTNER_TOKEN ?? ''
+const YCLIENTS_ACTIVATE_URL = 'https://api.yclients.com/api/v1/user/app/activation'
+
+/**
+ * Verify HMAC-SHA256 signature from YClients marketplace callback.
+ * sign = HMAC-SHA256(userData, PARTNER_TOKEN) in hex
+ */
+export async function verifyUserDataSign(userData: string, sign: string): Promise<boolean> {
+  try {
+    const encoder = new TextEncoder()
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(PARTNER_TOKEN),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    )
+    const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(userData))
+    const hex = Array.from(new Uint8Array(signature))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+    return hex === sign
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Decode base64-encoded user_data JSON from YClients marketplace.
+ */
+export function decodeUserData(userData: string): {
+  name?: string
+  email?: string
+  phone?: string
+  salon_name?: string
+} {
+  try {
+    const json = Buffer.from(userData, 'base64').toString('utf-8')
+    return JSON.parse(json)
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * Call YClients API to activate the integration for a given salon.
+ */
+export async function activateIntegration(
+  salonId: string,
+  _attemptId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(YCLIENTS_ACTIVATE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${PARTNER_TOKEN}`,
+      },
+      body: JSON.stringify({ salon_id: Number(salonId) }),
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => res.statusText)
+      return { success: false, error: `YClients API error ${res.status}: ${text}` }
+    }
+
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { success: false, error: message }
+  }
+}
+
+/**
+ * Insert a sync job and optionally fire a webhook to n8n.
+ * Fire-and-forget — never throws.
+ */
+export async function triggerInitialSync(
+  integrationId: string,
+  salonId: string,
+  orgUid: string
+): Promise<void> {
+  try {
+    const admin = createAdminClient()
+
+    await admin.from('yclients_sync_jobs').insert({
+      integration_id: integrationId,
+      job_type: 'initial',
+      status: 'pending',
+    })
+
+    const webhookUrl = process.env.YCLIENTS_SYNC_WEBHOOK_URL
+    if (webhookUrl) {
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ integration_id: integrationId, salon_id: salonId, org_uid: orgUid }),
+      }).catch(() => {
+        // fire & forget — ignore errors
+      })
+    }
+  } catch {
+    // never throw
+  }
+}
