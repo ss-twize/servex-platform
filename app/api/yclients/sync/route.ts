@@ -130,10 +130,10 @@ function recordToRow(r: YCRecord, orgUid: string) {
   const attendance = r.attendance ?? 0
   const confirmed = r.confirmed ?? 0
   let status: string
-  if (attendance === 1) status = 'Визит'
-  else if (attendance === -1) status = 'Неявка'
-  else if (confirmed === 1) status = 'Подтверждено'
-  else status = 'Ожидание'
+  if (attendance === 1) status = 'visited'
+  else if (attendance === -1) status = 'no_show'
+  else if (confirmed === 1) status = 'confirmed'
+  else status = 'not_confirmed'
 
   return {
     org_uid: orgUid,
