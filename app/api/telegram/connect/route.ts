@@ -75,8 +75,12 @@ async function cloneAndActivateWorkflow(credentialId: string, botUsername: strin
   const created = await createRes.json()
   const workflowId = created.id as string
 
-  // 5. Activate
-  await n8nFetch(`/workflows/${workflowId}/activate`, { method: 'POST' })
+  // 5. Activate — throw if failed so caller can roll back
+  const activateRes = await n8nFetch(`/workflows/${workflowId}/activate`, { method: 'POST' })
+  if (!activateRes.ok) {
+    const activateErr = await activateRes.json().catch(() => ({}))
+    throw new Error(`Failed to activate workflow: ${activateErr.message ?? activateRes.status}`)
+  }
 
   return workflowId
 }
