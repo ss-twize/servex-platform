@@ -42,9 +42,12 @@ async function cloneAndActivateWorkflow(credentialId: string, botUsername: strin
   const tpl = await tplRes.json()
 
   // 2. Strip read-only fields
-  const { id, updatedAt, createdAt, isArchived, versionId, activeVersionId,
-          versionCounter, triggerCount, activeVersion, tags, shared,
-          description, meta, pinData, active, ...cleanTpl } = tpl
+  const READ_ONLY = new Set(['id','updatedAt','createdAt','isArchived','versionId',
+    'activeVersionId','versionCounter','triggerCount','activeVersion',
+    'tags','shared','description','meta','pinData','active'])
+  const cleanTpl = Object.fromEntries(
+    Object.entries(tpl as Record<string, unknown>).filter(([k]) => !READ_ONLY.has(k))
+  )
 
   // 3. Update Telegram Trigger credential + workflow name
   cleanTpl.name = `AiAdmin — @${botUsername}`
