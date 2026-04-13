@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 type Mode = 'login' | 'register'
@@ -15,6 +16,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   function switchMode(m: Mode) {
     setMode(m)
@@ -128,18 +131,30 @@ export default function LoginPage() {
             <label className="block text-sm mb-1.5 font-montserrat" style={{ color: '#8299B4' }}>
               Пароль
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              placeholder="••••••••"
-              className="w-full px-4 py-3 rounded-lg text-sm outline-none transition-colors font-montserrat"
-              style={inputStyle}
-              onFocus={(e) => (e.target.style.borderColor = '#00FF00')}
-              onBlur={(e) => (e.target.style.borderColor = '#223444')}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                placeholder="••••••••"
+                className="w-full px-4 py-3 pr-11 rounded-lg text-sm outline-none transition-colors font-montserrat"
+                style={inputStyle}
+                onFocus={(e) => (e.target.style.borderColor = '#00FF00')}
+                onBlur={(e) => (e.target.style.borderColor = '#223444')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-3 flex items-center"
+                style={{ color: '#6B7A8D' }}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           {mode === 'register' && (
@@ -147,18 +162,30 @@ export default function LoginPage() {
               <label className="block text-sm mb-1.5 font-montserrat" style={{ color: '#8299B4' }}>
                 Повторите пароль
               </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                autoComplete="new-password"
-                placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-lg text-sm outline-none transition-colors font-montserrat"
-                style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = '#00FF00')}
-                onBlur={(e) => (e.target.style.borderColor = '#223444')}
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 pr-11 rounded-lg text-sm outline-none transition-colors font-montserrat"
+                  style={inputStyle}
+                  onFocus={(e) => (e.target.style.borderColor = '#00FF00')}
+                  onBlur={(e) => (e.target.style.borderColor = '#223444')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute inset-y-0 right-3 flex items-center"
+                  style={{ color: '#6B7A8D' }}
+                  tabIndex={-1}
+                  aria-label={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           )}
 
