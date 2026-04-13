@@ -28,6 +28,7 @@ export interface YClientsClient {
 function yclientsHeaders(): Record<string, string> {
   return {
     'Content-Type': 'application/json',
+    'Accept': 'application/vnd.api.v2+json',
     Authorization: `Bearer ${PARTNER_TOKEN}, User ${USER_TOKEN}`,
   }
 }

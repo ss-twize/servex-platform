@@ -9,6 +9,7 @@ const BASE_URL = 'https://api.yclients.com/api/v1'
 function ycHeaders() {
   return {
     'Content-Type': 'application/json',
+    'Accept': 'application/vnd.api.v2+json',
     Authorization: `Bearer ${PARTNER_TOKEN}, User ${USER_TOKEN}`,
   }
 }
