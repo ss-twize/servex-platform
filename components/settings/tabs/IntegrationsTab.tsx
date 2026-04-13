@@ -285,11 +285,10 @@ function TelegramCard({ connected, botName, botUsername, onConnect, onDisconnect
 interface WhatsAppCardProps {
   connected: boolean
   pending: boolean
-  hasInstance: boolean
   onRequest: () => Promise<{ ok: boolean; error?: string }>
 }
 
-function WhatsAppCard({ connected: initialConnected, pending: initialPending, hasInstance, onRequest }: WhatsAppCardProps) {
+function WhatsAppCard({ connected: initialConnected, pending: initialPending, onRequest }: WhatsAppCardProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [connected, setConnected] = useState(initialConnected)
@@ -310,10 +309,10 @@ function WhatsAppCard({ connected: initialConnected, pending: initialPending, ha
         const supabase = createClient()
         const { data } = await supabase
           .from('org_settings')
-          .select('whatsapp_connected, whatsapp_pending')
+          .select('whatsapp_id_instance, whatsapp_pending')
           .eq('org_uid', DEFAULT_ORG_UID)
           .single()
-        if (data?.whatsapp_connected) {
+        if (data?.whatsapp_id_instance) {
           setConnected(true)
           setPending(false)
         } else {
@@ -368,9 +367,7 @@ function WhatsAppCard({ connected: initialConnected, pending: initialPending, ha
           </div>
           <p className="text-sm text-[#5E7488] ml-4">
             {connected
-              ? hasInstance
-                ? 'Интеграция через Green-API активна'
-                : 'Подключено, ожидается настройка инстанса'
+              ? 'Интеграция через Green-API активна'
               : isPending
               ? 'Поддержка получила заявку и свяжется с вами'
               : 'Подключается через поддержку'}
@@ -569,9 +566,8 @@ export function IntegrationsTab() {
 
       {/* ── WhatsApp ───────────────────────────────────────────────────────── */}
       <WhatsAppCard
-        connected={settings.whatsapp_connected}
-        pending={settings.whatsapp_pending}
-        hasInstance={!!settings.whatsapp_id_instance}
+        connected={!!settings.whatsapp_id_instance}
+        pending={settings.whatsapp_pending && !settings.whatsapp_id_instance}
         onRequest={requestWhatsApp}
       />
     </div>
