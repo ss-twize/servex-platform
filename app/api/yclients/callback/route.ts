@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
     }
 
     // d. Call activation API
-    const result = await activateIntegration(salonId, attemptId)
+    const result = await activateIntegration(salonId)
 
     if (result.success) {
       // e. Update integration status to active
