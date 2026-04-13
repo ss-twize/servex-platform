@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { useSearchParams } from 'next/navigation'
 import { useOrgSettings } from '@/lib/hooks/useOrgSettings'
 import { useYClientsIntegrations, YClientsIntegration } from '@/lib/hooks/useYClientsIntegrations'
@@ -288,10 +289,42 @@ interface WhatsAppCardProps {
   onRequest: () => Promise<{ ok: boolean; error?: string }>
 }
 
-function WhatsAppCard({ connected, pending, hasInstance, onRequest }: WhatsAppCardProps) {
+function WhatsAppCard({ connected: initialConnected, pending: initialPending, hasInstance, onRequest }: WhatsAppCardProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sent, setSent] = useState(false)
+  const [connected, setConnected] = useState(initialConnected)
+  const [pending, setPending] = useState(initialPending)
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Poll Supabase every 10s while pending to detect when support clicks "Готово"
+  useEffect(() => {
+    setConnected(initialConnected)
+    setPending(initialPending)
+  }, [initialConnected, initialPending])
+
+  useEffect(() => {
+    if (!pending || connected) return
+
+    function scheduleCheck() {
+      pollingRef.current = setTimeout(async () => {
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('org_settings')
+          .select('whatsapp_connected, whatsapp_pending')
+          .eq('org_uid', DEFAULT_ORG_UID)
+          .single()
+        if (data?.whatsapp_connected) {
+          setConnected(true)
+          setPending(false)
+        } else {
+          scheduleCheck()
+        }
+      }, 10000)
+    }
+
+    scheduleCheck()
+    return () => { if (pollingRef.current) clearTimeout(pollingRef.current) }
+  }, [pending, connected])
 
   async function handleRequest() {
     setLoading(true)
@@ -299,7 +332,7 @@ function WhatsAppCard({ connected, pending, hasInstance, onRequest }: WhatsAppCa
     try {
       const result = await onRequest()
       if (result.ok) {
-        setSent(true)
+        setPending(true)
       } else {
         setError(result.error ?? 'Ошибка при отправке заявки')
       }
@@ -308,7 +341,7 @@ function WhatsAppCard({ connected, pending, hasInstance, onRequest }: WhatsAppCa
     }
   }
 
-  const isPending = pending || sent
+  const isPending = pending && !connected
   const statusColor = connected ? '#00FF00' : isPending ? '#F5A623' : '#5E7488'
   const statusLabel = connected ? 'Подключено' : isPending ? 'Заявка отправлена' : 'Не подключено'
 

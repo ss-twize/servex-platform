@@ -35,6 +35,8 @@ export async function POST() {
       `<code>whatsapp_id_instance</code> и <code>whatsapp_api_token_instance</code>\n` +
       `в таблице <code>org_settings</code>.`
 
+    const now = new Date().toISOString()
+
     const tgRes = await fetch(
       `https://api.telegram.org/bot${SUPPORT_BOT_TOKEN}/sendMessage`,
       {
@@ -44,6 +46,11 @@ export async function POST() {
           chat_id: SUPPORT_CHAT_ID,
           text: message,
           parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [[
+              { text: '✅ Готово', callback_data: `whatsapp_done:${DEFAULT_ORG_UID}` },
+            ]],
+          },
         }),
       }
     )
@@ -54,10 +61,15 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: 'Не удалось отправить уведомление' }, { status: 500 })
     }
 
-    // Mark as pending
+    // Mark as pending with timestamp
     await admin
       .from('org_settings')
-      .update({ whatsapp_pending: true, updated_at: new Date().toISOString() })
+      .update({
+        whatsapp_pending: true,
+        whatsapp_request_sent_at: now,
+        whatsapp_reminder_sent: false,
+        updated_at: now,
+      })
       .eq('org_uid', DEFAULT_ORG_UID)
 
     return NextResponse.json({ ok: true })
