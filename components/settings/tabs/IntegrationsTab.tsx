@@ -9,7 +9,7 @@ interface IntegrationCardProps {
   connected: boolean
   hint: string
   extraInfo?: React.ReactNode
-  onAction: () => Promise<void>
+  onAction: () => Promise<{ success: boolean; error?: string }>
   actionLabel: string
 }
 
@@ -21,8 +21,8 @@ function IntegrationCard({ title, connected, hint, extraInfo, onAction, actionLa
     setLoading(true)
     setMessage(null)
     try {
-      await onAction()
-      setMessage({ text: 'Запрос отправлен', ok: true })
+      const result = await onAction()
+      setMessage({ text: result.success ? 'Подключено' : 'Статус обновлён', ok: true })
     } catch {
       setMessage({ text: 'Ошибка при подключении', ok: false })
     } finally {
@@ -71,10 +71,28 @@ function IntegrationCard({ title, connected, hint, extraInfo, onAction, actionLa
 }
 
 export function IntegrationsTab() {
-  const { settings, loading } = useOrgSettings()
+  const { settings, loading, updateSettings } = useOrgSettings()
 
   if (loading) {
     return <div className="text-[#5E7488] py-8">Загрузка...</div>
+  }
+
+  async function connectYClients() {
+    await callWebhook('reconnect_yclients', { company_id: settings.yclients_company_id })
+    await updateSettings({ yclients_connected: true, yclients_company_id: settings.yclients_company_id ?? '1647948' })
+    return { success: true }
+  }
+
+  async function connectTelegram() {
+    await callWebhook('connect_telegram', {})
+    await updateSettings({ telegram_connected: true })
+    return { success: true }
+  }
+
+  async function connectWhatsApp() {
+    await callWebhook('connect_whatsapp', {})
+    await updateSettings({ whatsapp_connected: true })
+    return { success: true }
   }
 
   return (
@@ -92,7 +110,7 @@ export function IntegrationsTab() {
             </p>
           ) : null
         }
-        onAction={() => callWebhook('reconnect_yclients', {}).then(() => {})}
+        onAction={connectYClients}
         actionLabel={settings.yclients_connected ? 'Переподключить' : 'Подключить'}
       />
 
@@ -100,7 +118,7 @@ export function IntegrationsTab() {
         title="Telegram"
         connected={settings.telegram_connected}
         hint="Бот будет принимать сообщения от клиентов"
-        onAction={() => callWebhook('connect_telegram', {}).then(() => {})}
+        onAction={connectTelegram}
         actionLabel={settings.telegram_connected ? 'Переподключить' : 'Подключить'}
       />
 
@@ -108,7 +126,7 @@ export function IntegrationsTab() {
         title="WhatsApp"
         connected={settings.whatsapp_connected}
         hint="Через GREEN-API"
-        onAction={() => callWebhook('connect_whatsapp', {}).then(() => {})}
+        onAction={connectWhatsApp}
         actionLabel={settings.whatsapp_connected ? 'Переподключить' : 'Подключить'}
       />
     </div>
