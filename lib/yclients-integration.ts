@@ -74,8 +74,11 @@ export async function activateIntegration(
 }
 
 /**
- * Insert a sync job and optionally fire a webhook to n8n.
+ * Insert a sync job and trigger sync via our own API route.
  * Fire-and-forget — never throws.
+ *
+ * Set YCLIENTS_SYNC_WEBHOOK_URL=https://servex-platform.vercel.app/api/yclients/sync
+ * in Vercel env vars to enable automatic sync after connection.
  */
 export async function triggerInitialSync(
   integrationId: string,
@@ -85,21 +88,28 @@ export async function triggerInitialSync(
   try {
     const admin = createAdminClient()
 
-    await admin.from('yclients_sync_jobs').insert({
-      integration_id: integrationId,
-      job_type: 'initial',
-      status: 'pending',
-    })
+    const { data: job } = await admin
+      .from('yclients_sync_jobs')
+      .insert({
+        integration_id: integrationId,
+        job_type: 'initial',
+        status: 'pending',
+      })
+      .select('id')
+      .single()
 
-    const webhookUrl = process.env.YCLIENTS_SYNC_WEBHOOK_URL
-    if (webhookUrl) {
-      fetch(webhookUrl, {
+    const syncUrl = process.env.YCLIENTS_SYNC_WEBHOOK_URL
+    if (syncUrl) {
+      fetch(syncUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ integration_id: integrationId, salon_id: salonId, org_uid: orgUid }),
-      }).catch(() => {
-        // fire & forget — ignore errors
-      })
+        body: JSON.stringify({
+          integration_id: integrationId,
+          salon_id: salonId,
+          org_uid: orgUid,
+          job_id: job?.id,
+        }),
+      }).catch(() => {})
     }
   } catch {
     // never throw
