@@ -23,6 +23,9 @@ export interface OrgSettings {
   yclients_company_id: string | null
   yclients_connected: boolean
   telegram_connected: boolean
+  telegram_bot_token: string | null
+  telegram_bot_name: string | null
+  telegram_bot_username: string | null
   whatsapp_connected: boolean
 }
 
@@ -45,6 +48,9 @@ const DEFAULT_SETTINGS: OrgSettings = {
   yclients_company_id: null,
   yclients_connected: false,
   telegram_connected: false,
+  telegram_bot_token: null,
+  telegram_bot_name: null,
+  telegram_bot_username: null,
   whatsapp_connected: false,
 }
 

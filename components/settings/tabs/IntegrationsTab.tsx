@@ -146,13 +146,145 @@ function YClientsFilialCard({ integration, onSync, syncing }: YClientsFilialCard
   )
 }
 
-// ─── Simple integration card (Telegram / WhatsApp) ─────────────────────────────
+// ─── Telegram card ─────────────────────────────────────────────────────────────
+
+interface TelegramCardProps {
+  connected: boolean
+  botName: string | null
+  botUsername: string | null
+  onConnect: (token: string) => Promise<{ ok: boolean; error?: string }>
+  onDisconnect: () => Promise<void>
+}
+
+function TelegramCard({ connected, botName, botUsername, onConnect, onDisconnect }: TelegramCardProps) {
+  const [token, setToken] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
+
+  async function handleConnect() {
+    if (!token.trim()) return
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await onConnect(token.trim())
+      if (result.ok) {
+        setToken('')
+        setShowForm(false)
+      } else {
+        setError(result.error ?? 'Ошибка подключения')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleDisconnect() {
+    setLoading(true)
+    try {
+      await onDisconnect()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="bg-[#0F1622] border border-[#223444] rounded-xl p-4 mb-3">
+      <div className="flex items-start justify-between gap-4 mb-1">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className="w-2 h-2 rounded-full flex-shrink-0"
+              style={{ backgroundColor: connected ? '#00FF00' : '#5E7488' }}
+            />
+            <span className="text-white font-medium">Telegram</span>
+            <span
+              className="text-xs px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: connected ? 'rgba(0,255,0,0.1)' : 'rgba(94,116,136,0.15)',
+                color: connected ? '#00FF00' : '#5E7488',
+              }}
+            >
+              {connected ? 'Подключено' : 'Не подключено'}
+            </span>
+          </div>
+          {connected && botName && (
+            <p className="text-sm text-[#EDF2FA] ml-4">
+              {botName}{botUsername ? ` (@${botUsername})` : ''}
+            </p>
+          )}
+          <p className="text-sm text-[#5E7488] ml-4 mt-0.5">
+            {connected
+              ? 'Бот принимает сообщения от клиентов'
+              : 'Создайте бота через @BotFather и вставьте токен'}
+          </p>
+        </div>
+
+        <div className="flex gap-2 flex-shrink-0">
+          {connected ? (
+            <>
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="text-sm px-3 py-1.5 rounded-lg border border-[#223444] text-[#5E7488] hover:border-[#00FF00] hover:text-[#00FF00] transition-colors whitespace-nowrap"
+              >
+                Сменить бота
+              </button>
+              <button
+                onClick={handleDisconnect}
+                disabled={loading}
+                className="text-sm px-3 py-1.5 rounded-lg border border-red-900/50 text-red-400 hover:border-red-500 disabled:opacity-50 transition-colors whitespace-nowrap"
+              >
+                Отключить
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="text-sm px-4 py-1.5 rounded-lg border border-[#00FF00]/50 text-[#00FF00] hover:bg-[#00FF00]/10 transition-colors whitespace-nowrap font-medium"
+            >
+              Подключить
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showForm && (
+        <div className="mt-3 pt-3 border-t border-[#223444]">
+          <p className="text-xs text-[#5E7488] mb-2">
+            Токен бота из @BotFather (вида <span className="font-mono text-[#7a94aa]">1234567890:ABC...</span>)
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
+              placeholder="Вставьте токен бота"
+              className="flex-1 bg-[#0a0f1a] border border-[#223444] text-[#EDF2FA] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF00] transition-colors font-mono"
+            />
+            <button
+              onClick={handleConnect}
+              disabled={loading || !token.trim()}
+              className="px-4 py-2 rounded-lg bg-[#00FF00]/10 border border-[#00FF00]/50 text-[#00FF00] text-sm font-medium hover:bg-[#00FF00]/20 disabled:opacity-50 transition-colors whitespace-nowrap"
+            >
+              {loading ? 'Проверка...' : 'Подключить'}
+            </button>
+          </div>
+          {error && (
+            <p className="text-xs text-red-400 mt-2">{error}</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Simple integration card (WhatsApp) ────────────────────────────────────────
 
 interface SimpleCardProps {
   title: string
   connected: boolean
   hint: string
-  extraInfo?: React.ReactNode
   onAction: () => Promise<{ success: boolean; error?: string }>
   actionLabel: string
 }
@@ -161,7 +293,6 @@ function SimpleIntegrationCard({
   title,
   connected,
   hint,
-  extraInfo,
   onAction,
   actionLabel,
 }: SimpleCardProps) {
@@ -202,7 +333,6 @@ function SimpleIntegrationCard({
               {connected ? 'Подключено' : 'Не подключено'}
             </span>
           </div>
-          {extraInfo && <div className="ml-4 mb-1">{extraInfo}</div>}
           <p className="text-sm text-[#5E7488] ml-4">{hint}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -258,10 +388,27 @@ export function IntegrationsTab() {
     }
   }
 
-  async function connectTelegram() {
-    await callWebhook('connect_telegram', {})
-    await updateSettings({ telegram_connected: true })
-    return { success: true }
+  async function connectTelegram(token: string): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const res = await fetch('/api/telegram/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        // Reload settings to get new bot name/username
+        window.location.reload()
+      }
+      return data
+    } catch {
+      return { ok: false, error: 'Ошибка соединения' }
+    }
+  }
+
+  async function disconnectTelegram() {
+    await fetch('/api/telegram/connect', { method: 'DELETE' })
+    window.location.reload()
   }
 
   async function connectWhatsApp() {
@@ -362,12 +509,12 @@ export function IntegrationsTab() {
       </div>
 
       {/* ── Telegram ───────────────────────────────────────────────────────── */}
-      <SimpleIntegrationCard
-        title="Telegram"
+      <TelegramCard
         connected={settings.telegram_connected}
-        hint="Бот будет принимать сообщения от клиентов"
-        onAction={connectTelegram}
-        actionLabel={settings.telegram_connected ? 'Переподключить' : 'Подключить'}
+        botName={settings.telegram_bot_name ?? null}
+        botUsername={settings.telegram_bot_username ?? null}
+        onConnect={connectTelegram}
+        onDisconnect={disconnectTelegram}
       />
 
       {/* ── WhatsApp ───────────────────────────────────────────────────────── */}
