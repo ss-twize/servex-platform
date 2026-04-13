@@ -49,15 +49,20 @@ async function cloneAndActivateWorkflow(credentialId: string, botUsername: strin
     Object.entries(tpl as Record<string, unknown>).filter(([k]) => !READ_ONLY.has(k))
   )
 
-  // 3. Update Telegram Trigger credential + workflow name
+  // 3. Update Telegram Trigger: new credential, fresh webhookId, new node id
   cleanTpl.name = `AiAdmin — @${botUsername}`
   cleanTpl.nodes = (cleanTpl.nodes as Array<Record<string, unknown>>).map((node) => {
     if (node.type === 'n8n-nodes-base.telegramTrigger') {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { webhookId: _wh, id: _nid, ...restNode } = node
       return {
-        ...node,
+        ...restNode,
+        // New node id so n8n treats it as a fresh node
+        id: crypto.randomUUID(),
         credentials: {
           telegramApi: { id: credentialId, name: `@${botUsername}` },
         },
+        // webhookId intentionally omitted — n8n will generate a fresh one
       }
     }
     return node
