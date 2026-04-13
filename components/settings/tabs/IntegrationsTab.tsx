@@ -295,14 +295,14 @@ function WhatsAppCard({ connected: initialConnected, pending: initialPending, on
   const [pending, setPending] = useState(initialPending)
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Poll Supabase every 10s while pending to detect when support clicks "Готово"
   useEffect(() => {
     setConnected(initialConnected)
     setPending(initialPending)
   }, [initialConnected, initialPending])
 
+  // Poll every 10s until connected — catches both "support clicks Готово" and manual DB fill
   useEffect(() => {
-    if (!pending || connected) return
+    if (connected) return
 
     function scheduleCheck() {
       pollingRef.current = setTimeout(async () => {
@@ -323,7 +323,7 @@ function WhatsAppCard({ connected: initialConnected, pending: initialPending, on
 
     scheduleCheck()
     return () => { if (pollingRef.current) clearTimeout(pollingRef.current) }
-  }, [pending, connected])
+  }, [connected])
 
   async function handleRequest() {
     setLoading(true)
