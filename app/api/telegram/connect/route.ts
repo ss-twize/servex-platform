@@ -30,6 +30,27 @@ export async function POST(request: NextRequest) {
     const botName = bot.first_name as string
     const botUsername = bot.username as string
 
+    // Register webhook in n8n (one workflow handles all bots via token in query param)
+    const N8N_WEBHOOK = 'https://n8n.srv1090249.hstgr.cloud/webhook/tg-agent'
+    const webhookUrl = `${N8N_WEBHOOK}?token=${encodeURIComponent(token)}&org=${encodeURIComponent(DEFAULT_ORG_UID)}`
+
+    const webhookRes = await fetch(
+      `https://api.telegram.org/bot${token}/setWebhook`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: webhookUrl }),
+      }
+    )
+    const webhookData = await webhookRes.json()
+
+    if (!webhookData.ok) {
+      return NextResponse.json(
+        { ok: false, error: `Не удалось зарегистрировать вебхук: ${webhookData.description ?? ''}` },
+        { status: 500 }
+      )
+    }
+
     // Save to org_settings
     const admin = createAdminClient()
     const { error } = await admin
@@ -56,6 +77,21 @@ export async function POST(request: NextRequest) {
 export async function DELETE() {
   try {
     const admin = createAdminClient()
+
+    // Get current token to delete webhook first
+    const { data: org } = await admin
+      .from('org_settings')
+      .select('telegram_bot_token')
+      .eq('org_uid', DEFAULT_ORG_UID)
+      .single()
+
+    if (org?.telegram_bot_token) {
+      await fetch(
+        `https://api.telegram.org/bot${org.telegram_bot_token}/deleteWebhook`,
+        { method: 'POST' }
+      ).catch(() => {}) // Best effort — don't fail if Telegram is unreachable
+    }
+
     await admin
       .from('org_settings')
       .update({
