@@ -12,7 +12,7 @@ export async function POST() {
     // Get org info to include in notification
     const { data: org } = await admin
       .from('org_settings')
-      .select('salon_name, phone, whatsapp_pending')
+      .select('salon_name, phone, owner_telegram, whatsapp_pending')
       .eq('org_uid', DEFAULT_ORG_UID)
       .single()
 
@@ -22,12 +22,14 @@ export async function POST() {
 
     const salonName = org?.salon_name ?? 'Не указано'
     const phone = org?.phone ?? 'Не указан'
+    const ownerTelegram = org?.owner_telegram ?? 'Не указан'
 
     // Send Telegram notification to support
     const message =
       `📱 <b>Заявка на подключение WhatsApp</b>\n\n` +
       `🏢 Салон: <b>${salonName}</b>\n` +
       `📞 Телефон: <b>${phone}</b>\n` +
+      `💬 Telegram: <b>${ownerTelegram}</b>\n` +
       `🔑 org_uid: <code>${DEFAULT_ORG_UID}</code>\n\n` +
       `Необходимо настроить Green-API инстанс и заполнить поля\n` +
       `<code>whatsapp_id_instance</code> и <code>whatsapp_api_token_instance</code>\n` +

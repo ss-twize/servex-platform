@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [telegram, setTelegram] = useState('')
 
   function switchMode(m: Mode) {
     setMode(m)
@@ -25,6 +26,7 @@ export default function LoginPage() {
     setSuccess(null)
     setPassword('')
     setConfirmPassword('')
+    setTelegram('')
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -46,7 +48,13 @@ export default function LoginPage() {
         setLoading(false)
         return
       }
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { telegram: telegram.trim() || null },
+        },
+      })
       if (error) {
         setError(error.message.includes('already') ? 'Этот email уже зарегистрирован' : 'Ошибка регистрации. Попробуйте ещё раз.')
         setLoading(false)
@@ -158,35 +166,59 @@ export default function LoginPage() {
           </div>
 
           {mode === 'register' && (
-            <div>
-              <label className="block text-sm mb-1.5 font-montserrat" style={{ color: '#8299B4' }}>
-                Повторите пароль
-              </label>
-              <div className="relative">
+            <>
+              <div>
+                <label className="block text-sm mb-1.5 font-montserrat" style={{ color: '#8299B4' }}>
+                  Повторите пароль
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm outline-none transition-colors font-montserrat"
+                    style={inputStyle}
+                    onFocus={(e) => (e.target.style.borderColor = '#00FF00')}
+                    onBlur={(e) => (e.target.style.borderColor = '#223444')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    className="absolute inset-y-0 right-3 flex items-center"
+                    style={{ color: '#6B7A8D' }}
+                    tabIndex={-1}
+                    aria-label={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-baseline gap-2 mb-1.5">
+                  <label className="block text-sm font-montserrat" style={{ color: '#8299B4' }}>
+                    Telegram
+                  </label>
+                  <span className="text-xs font-montserrat" style={{ color: '#4A5568' }}>
+                    Для связи с поддержкой
+                  </span>
+                </div>
                 <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  autoComplete="new-password"
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 pr-11 rounded-lg text-sm outline-none transition-colors font-montserrat"
+                  type="text"
+                  value={telegram}
+                  onChange={(e) => setTelegram(e.target.value)}
+                  autoComplete="off"
+                  placeholder="@username"
+                  className="w-full px-4 py-3 rounded-lg text-sm outline-none transition-colors font-montserrat"
                   style={inputStyle}
                   onFocus={(e) => (e.target.style.borderColor = '#00FF00')}
                   onBlur={(e) => (e.target.style.borderColor = '#223444')}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword((v) => !v)}
-                  className="absolute inset-y-0 right-3 flex items-center"
-                  style={{ color: '#6B7A8D' }}
-                  tabIndex={-1}
-                  aria-label={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
-                >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
               </div>
-            </div>
+            </>
           )}
 
           {error && (
