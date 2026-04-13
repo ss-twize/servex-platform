@@ -30,6 +30,8 @@ export interface OrgSettings {
   whatsapp_pending: boolean
   whatsapp_id_instance: string | null
   whatsapp_api_token_instance: string | null
+  n8n_credential_id: string | null
+  n8n_workflow_id: string | null
 }
 
 const DEFAULT_SETTINGS: OrgSettings = {
@@ -58,6 +60,8 @@ const DEFAULT_SETTINGS: OrgSettings = {
   whatsapp_pending: false,
   whatsapp_id_instance: null,
   whatsapp_api_token_instance: null,
+  n8n_credential_id: null,
+  n8n_workflow_id: null,
 }
 
 export function useOrgSettings() {
