@@ -87,7 +87,7 @@ export default function LoginPage() {
 
         {/* Tab switcher */}
         <div className="flex rounded-lg mb-6 p-1" style={{ backgroundColor: '#141E2B' }}>
-          {(['login', 'register'] as Mode[]).map((m) => (
+          {(['register', 'login'] as Mode[]).map((m) => (
             <button
               key={m}
               type="button"
